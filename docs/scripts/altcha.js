@@ -15,8 +15,8 @@
 (function () {
   "use strict";
 
-  if (window.__bvAltchaForms_v2) return;
-  window.__bvAltchaForms_v2 = true;
+  if (window.__bvAltchaForms_v3) return;
+  window.__bvAltchaForms_v3 = true;
 
   const ALTCHA_LIB = "https://cagdasunal.github.io/brightvalley/scripts/altcha-engine.min.js";
   // Webflow form blocks carry both attributes; the navbar and modal search forms carry neither.
@@ -82,18 +82,32 @@
     });
   }
 
+  function resubmit(form) {
+    form.__bvAltchaPassed = true;
+    try {
+      if (typeof form.requestSubmit === "function") form.requestSubmit(submitBtn(form) || undefined);
+      else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    } finally {
+      form.__bvAltchaPassed = false;
+    }
+  }
+
   function gate(form) {
     form.addEventListener(
       "submit",
       function (e) {
-        if (form.__bvAltchaPassed) return; // solved: let Webflow's own handler send it
+        // Solved (the usual case: it solves in the background at load), or our own re-submit:
+        // let this very event reach Webflow's handler.
+        if (form.__bvAltchaPassed || form.__bvAltchaSolved) return;
         e.preventDefault();
         e.stopImmediatePropagation();
+        if (form.__bvAltchaHeld) return; // already waiting: a second click must not send twice
+        form.__bvAltchaHeld = true;
         waitForSolution(form).then(function () {
-          form.__bvAltchaPassed = true;
-          if (typeof form.requestSubmit === "function") form.requestSubmit(submitBtn(form) || undefined);
-          else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-          form.__bvAltchaPassed = false;
+          // A new task, never a microtask: during a real click the browser is still firing this
+          // submit event, and requestSubmit() called then is silently ignored. v2 re-submitted
+          // from a microtask, so real clicks did nothing (S02-r2 fix, 2026-10-01).
+          setTimeout(function () { form.__bvAltchaHeld = false; resubmit(form); }, 0);
         });
       },
       true, // capture: runs before webflow.js's submit handler
