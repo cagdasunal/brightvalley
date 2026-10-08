@@ -18,7 +18,7 @@
   if (window.__bvAltchaForms_v3) return;
   window.__bvAltchaForms_v3 = true;
 
-  const ALTCHA_LIB = "https://cagdasunal.github.io/brightvalley/scripts/altcha-engine.min.js";
+  const ALTCHA_LIB = "https://files.brightvalleymarketing.com/scripts/altcha-engine.min.js";
   // Webflow form blocks carry both attributes; the navbar and modal search forms carry neither.
   const FORM_SELECTOR = "form[data-wf-page-id][data-wf-element-id]";
   const MAX_NUMBER = 100000; // the same cost as the cagd.as / CEL workers' challenges
