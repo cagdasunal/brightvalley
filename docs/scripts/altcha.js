@@ -106,10 +106,16 @@
   // The engine never answered (script error, or no custom element after ENGINE_WAIT_MS), or the
   // widget could not get a challenge from the Worker: ALTCHA can't be solved, so it stops
   // blocking (the box's required checkbox is released) and the send goes on with Turnstile only.
+  // The engine also leaves "Verifying... please wait." as the checkbox's custom validity when Send
+  // is pressed mid-solve, and only a VERIFIED state clears it; `required = false` does not release
+  // it, so it is cleared here too.
   function altchaDown(form) {
     form.__bvDown = true;
     const cb = form.__bvMode === "box" ? boxCheckbox(form) : null;
-    if (cb) cb.required = false;
+    if (cb) {
+      cb.required = false;
+      try { cb.setCustomValidity(""); } catch (e) { /* no-op */ }
+    }
   }
 
   function makeWidget(form, hidden) {
