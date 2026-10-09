@@ -321,18 +321,33 @@
     setTimeout(function () {
       const box = form.__bvBox || null;
       const anchor = box ? box.nextSibling : null;
-      if (box && form.parentNode) form.parentNode.insertBefore(box, form);
-      form.__bvPassed = true;
       try {
+        // A move that fails leaves the box in the form: the send still goes and the form is freed.
+        try { if (box && form.parentNode) form.parentNode.insertBefore(box, form); } catch (e) { /* no-op */ }
+        form.__bvPassed = true;
         if (typeof form.requestSubmit === "function") form.requestSubmit(submitBtn(form) || undefined);
         else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
       } finally {
         form.__bvPassed = false;
         form.__bvHeld = false;
-        if (box) form.insertBefore(box, anchor && anchor.parentNode === form ? anchor : submitBtn(form));
+        if (box) restoreBox(form, box, anchor);
         refreshTurnstile(form); // invalidate the single-use token just sent
       }
     }, 0);
+  }
+
+  // Back to where it was: before its old next sibling, else before Send when Send is a direct
+  // child of the form, else at the end. Send can sit deeper (Webflow wrapper), and the DOM calls
+  // here must never throw: the Turnstile refresh after them has to run.
+  function restoreBox(form, box, anchor) {
+    try {
+      let ref = anchor && anchor.parentNode === form ? anchor : null;
+      if (!ref) {
+        const btn = submitBtn(form);
+        ref = btn && btn.parentNode === form ? btn : null;
+      }
+      form.insertBefore(box, ref);
+    } catch (e) { /* no-op */ }
   }
 
   function gate(form) {
